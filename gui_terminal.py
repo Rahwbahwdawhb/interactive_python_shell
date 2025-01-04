@@ -3,8 +3,6 @@ from PyQt6.QtGui import QColor, QFont,QTextCursor,QFontDatabase
 from PyQt6.QtCore import Qt
 from PyQt6 import QtWidgets
 
-
-
 class PlainTextEdit(QPlainTextEdit):
     def __init__(self):
         super().__init__()
@@ -18,6 +16,7 @@ class PlainTextEdit(QPlainTextEdit):
         if QApplication.keyboardModifiers()==Qt.KeyboardModifier.ControlModifier:
             if event.key()==Qt.Key.Key_Return:
                 current_prompt=self.toPlainText()
+                self.execute_str(current_prompt)
                 self.prompt_history.append(current_prompt)
                 self.prompt_display_counter=0
                 self.setPlainText('')
@@ -34,7 +33,7 @@ class PlainTextEdit(QPlainTextEdit):
                     self.setPlainText('')
         else:
             if event.key()==Qt.Key.Key_Return:
-                current_prompt=self.toPlainText()
+                current_prompt=self.toPlainText()                
                 last_row=current_prompt.split('\n')[-2]
                 N_indents=int((len(last_row)-len(last_row.lstrip()))/len(self.indent))+1
                 if current_prompt[-2]==':':  
@@ -50,9 +49,8 @@ class PlainTextEdit(QPlainTextEdit):
         cursor=self.textCursor()
         cursor.setPosition(len(new_prompt))
         self.setTextCursor(cursor)
-
-
-
+    def execute_str(self,str_to_execute):
+        pass
 class GUI(QWidget):
     def __init__(self):
         super().__init__()
@@ -94,6 +92,35 @@ class GUI(QWidget):
 
 app=QApplication([])
 app.setFont(QFont('Times New Roman'))
+
+from interactive_run import interactive_handler
+inp=r'C:\Users\Robban\Desktop\tt\f1.py'
+ih=interactive_handler(inp)
+del interactive_handler
+
+import sys
+from traceback import print_exc,format_exc
+
 gui=GUI()
+def execute_str(self,str_to_execute):
+    ih.input_str=str_to_execute
+    f=open('temp.txt','w')
+    sys.stdout=f
+    try:
+        ih.execute_input_str()
+    except Exception as e:
+        f.write(format_exc(limit=None,chain=True))
+    f.close()
+    f=open('temp.txt','r')
+    gui.add_text_to_terminal(f">{str_to_execute}\n{f.read()}")
+
+PlainTextEdit.execute_str=execute_str
+
 gui.show()
 app.exec()
+
+#todo:
+#*tidy up and set structure
+#*start from terminal
+#*handle temporary files, remove after use? can save in working memory instead of to file?
+#*adjust GUI look/color

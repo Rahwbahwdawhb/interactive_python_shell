@@ -33,29 +33,26 @@ class interactive_handler:
                 self.check=self.check[:-1]
     def read_user_input(self):
         self.input_str=input('> ')
-    def import_from_script_str(self):
-        spec=spec_from_loader(self.work_script_name,loader=None)
-        self.module=module_from_spec(spec)
-        exec(self.check, self.module.__dict__)
-        for key in list(globals().keys()):
-            if key not in self.base_globals and globals()[key]!=self:
-                del globals()[key]
+    def import_from_script_str(self,input_str=None):
+        if not input_str:
+            spec=spec_from_loader(self.work_script_name,loader=None)
+            self.module=module_from_spec(spec)
+            exec(self.check, self.module.__dict__)
+            for key in list(globals().keys()):
+                if key not in self.base_globals and globals()[key]!=self:
+                    del globals()[key]
+        else:
+            spec=spec_from_loader('temp',loader=None)
+            self.module=module_from_spec(spec)
+            exec(input_str, self.module.__dict__)        
         for thing in dir(self.module):
             if thing not in self.non_custom_dict_entries:
                 globals()[thing]=eval(f"self.module.{thing}")
     def execute_input_str(self):
         display_return_str_bool=True
-        if self.input_str.startswith('def') or  self.input_str.startswith('class'):
+        if 'def' in self.input_str or 'class' in self.input_str:
             display_return_str_bool=False
-            name_part=self.input_str.split(':')[0].split(' ')[1]
-            name=''
-            for ch in name_part:
-                if ch.isalpha():
-                    name+=ch
-                else:
-                    break
-            exec(self.input_str)
-            globals()[name]=eval(name)
+            self.import_from_script_str(self.input_str)
         elif '=' in self.input_str:
             display_return_str_bool=False
             input_str_len=len(self.input_str.split('=')[0])
@@ -92,7 +89,8 @@ class interactive_handler:
 
 if __name__=="__main__":    
     try:
-        __interactive_handler=interactive_handler(argv[1])
+        __interactive_handler=interactive_handler(r'C:\Users\Robban\Desktop\tt\f1.py')
+        # __interactive_handler=interactive_handler(argv[1])
         del interactive_handler #remove the class definition after creation to avoid interference
         while True:
             try:
