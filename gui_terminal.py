@@ -3,10 +3,10 @@ from PyQt6.QtGui import QColor, QFont,QTextCursor,QFontDatabase,QKeyEvent
 from PyQt6.QtCore import Qt,pyqtSignal
 from PyQt6 import QtWidgets
 
-import sys
-from traceback import format_exc
-import tempfile
 from interactive_run import interactive_handler
+
+from io import StringIO
+from contextlib import redirect_stdout
 
 class PlainTextEdit(QPlainTextEdit):
     prompt_input_signal=pyqtSignal(str)
@@ -110,16 +110,13 @@ class frontend_backend_linker:
             self.ih.read_file()
             if self.ih.check!=self.ih.ref:
                 self.ih.ref=self.ih.check
-                self.ih.import_from_script_str()
-            with tempfile.NamedTemporaryFile(mode='w+t', delete_on_close=False) as f:
-                sys.stdout=f
-                try:
-                    self.ih.execute_input_str()
-                except Exception as e:
-                    f.write(format_exc(limit=None,chain=True))
-                f.close()
-                with open(f.name,'r') as f_:            
-                    self.gui.add_text_to_terminal(f">{str_}\n{f_.read()}")
+                self.ih.import_from_script_str()            
+            f = StringIO()
+            with redirect_stdout(f):
+                self.ih.execute_input_str()
+            if self.ih.return_str=='':
+                self.ih.return_str=f.getvalue()
+            self.gui.add_text_to_terminal(f">{str_}\n{self.ih.return_str}")
     def run(self):
         self.gui.show()
         self.app.exec()

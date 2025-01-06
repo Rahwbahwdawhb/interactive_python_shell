@@ -3,6 +3,9 @@ from traceback import print_exc
 from sys import argv
 from os.path import dirname,basename,join
 from os import _exit
+from io import StringIO
+from contextlib import redirect_stdout
+from traceback import format_exc
 
 #run through command line as: python f2.py path\to\script.py
 #to read script.py and go to an interactive python shell that has access to everything defined in script.py
@@ -48,29 +51,33 @@ class interactive_handler:
         for thing in dir(self.module):
             if thing not in self.non_custom_dict_entries:
                 globals()[thing]=eval(f"self.module.{thing}")
-    def execute_input_str(self):
-        display_return_str_bool=True
-        if 'def' in self.input_str or 'class' in self.input_str:
-            display_return_str_bool=False
-            self.import_from_script_str(self.input_str)
-        elif '=' in self.input_str:
-            display_return_str_bool=False
-            input_str_len=len(self.input_str.split('=')[0])
-            for check_index in [input_str_len-1,input_str_len+1]:
-               if self.input_str[check_index] in {'=','<','>','!'}:
-                   display_return_str_bool=True
-                   break
-            if not display_return_str_bool:
-                key=self.input_str.split('=')[0]
-                value=self.input_str[len(key)+1:]
-                globals()[key]=eval(value)
-        if display_return_str_bool:
-            if self.input_str=='exit()':
-                _exit(1)
-            else:
-                self.return_str=eval(self.input_str)
-                if self.return_str!=None:
-                    print(self.return_str)
+    def execute_input_str(self):        
+        try:
+            run_exec_bool=True
+            if len(self.input_str.strip().split('\n'))==1 and 'def' not in self.input_str and 'class' not in self.input_str:
+                if '=' not in self.input_str:
+                    input_ok_bool=True
+                else:
+                    input_ok_bool=False
+                    for i,ch in enumerate(self.input_str[:-1]):
+                        if ch=='=' and i!=0:
+                            if self.input_str[i-1] in {'<','>','!','='} or self.input_str[i+1] in {'<','>','!','='}:
+                                input_ok_bool=True
+                            else:
+                                input_ok_bool=False
+                                break
+                if input_ok_bool:
+                    return_str=eval(self.input_str)
+                    self.return_str='' if return_str==None else str(return_str)
+                    run_exec_bool=False
+            if run_exec_bool:                
+                f = StringIO()            
+                with redirect_stdout(f):
+                    self.import_from_script_str(self.input_str)
+                self.return_str = f.getvalue()
+        except Exception as e:
+                self.return_str=format_exc(limit=None,chain=True)
+
     def user_interaction(self):
         self.read_user_input()        
         off_limit_response_str=''
@@ -86,6 +93,7 @@ class interactive_handler:
                 self.ref=self.check
                 self.import_from_script_str()
             self.execute_input_str()
+            print(self.return_str)
 
 if __name__=="__main__":    
     try:
